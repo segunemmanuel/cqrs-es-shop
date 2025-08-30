@@ -134,7 +134,7 @@ curl -X POST http://127.0.0.1:8000/api/commands/products \
 
 ## Postman
 
-Import the provided Postman collection (`/docs/postman/cqrs_es_shop_postman_collection.json`) and environment (`/docs/postman/cqrs_es_shop_postman_environment.json`).
+Import the provided Postman collection (`cqrs_es_shop_postman_collection.json`).
 
 Recommended flow:
 
