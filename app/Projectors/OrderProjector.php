@@ -60,4 +60,46 @@ class OrderProjector
             'updated_at' => now(),
         ]);
     }
+
+    public function onOrderItemRemoved(array $p): void
+{
+    $row = DB::table('order_reads')->where('id', $p['order_id'])->first();
+    if (! $row) return;
+
+    $items = json_decode($row->items, true) ?? [];
+    $new   = [];
+    $qtyToRemove = (int) $p['qty'];
+
+    foreach ($items as $it) {
+        if ($it['product_id'] === $p['product_id'] && $qtyToRemove > 0) {
+            $keepQty = max(0, $it['qty'] - $qtyToRemove);
+            $qtyToRemove -= min($it['qty'], (int)$p['qty']);
+
+            if ($keepQty > 0) {
+                $it['qty'] = $keepQty;
+                $new[] = $it;
+            }
+        } else {
+            $new[] = $it;
+        }
+    }
+
+    $total = array_reduce($new, fn($c,$i)=>$c + $i['qty']*$i['price_cents'], 0);
+
+    DB::table('order_reads')->where('id', $p['order_id'])->update([
+        'items'       => json_encode($new),
+        'total_cents' => $total,
+        'updated_at'  => now(),
+    ]);
+}
+
+public function onPaymentAuthorized(array $p): void
+{
+    // Model choice: set status to 'paid' (or keep 'placed' and add a paid flag — simple here)
+    DB::table('order_reads')->where('id', $p['order_id'])->update([
+        'status'     => 'paid',
+        'updated_at' => now(),
+    ]);
+}
+
 }

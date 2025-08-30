@@ -20,6 +20,9 @@ class ProjectorRegistry
             'OrderItemAdded'   => fn() => $this->orders->onOrderItemAdded($payload),
             'OrderPlaced'      => fn() => $this->orders->onOrderPlaced($payload),
             'OrderCancelled'   => fn() => $this->orders->onOrderCancelled($payload),
+            'OrderItemRemoved' => fn() => $this->orders->onOrderItemRemoved($payload),
+            'PaymentAuthorized'=> fn() => $this->orders->onPaymentAuthorized($payload),
+
         ];
 
         if (isset($map[$eventName])) {

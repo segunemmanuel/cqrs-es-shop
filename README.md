@@ -1,61 +1,158 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# Laravel CQRS + Event Sourcing Shop
 
-## About Laravel
+A demo **e-commerce backend** built with Laravel 11, demonstrating **CQRS** (Command Query Responsibility Segregation) and **Event Sourcing** patterns.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Commands append **events** to an `event_store`.
+- Projections build **read models** (`product_reads`, `inventory_reads`, `order_reads`) for fast queries.
+- Tools to **rebuild projections** and **tail the event stream**.
+- Supports **idempotency keys** and **optimistic concurrency**.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Features
 
-## Learning Laravel
+- Event-sourced aggregates: Products, Inventory, Orders
+- CQRS separation: Commands (writes) vs Reads (queries)
+- Projection system with replay:
+    ```bash
+    php artisan projections:rebuild
+    ```
+- Event stream tailing:
+    ```bash
+    php artisan events:tail
+    ```
+- Idempotency keys (header `Idempotency-Key`)
+- Optimistic concurrency (send `expected_version` in body)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Tech Stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- [Laravel 11](https://laravel.com/)
+- PHP 8.2+
+- MySQL (or MariaDB)
+- Composer
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Database Schema
 
-### Premium Partners
+- **event_store**: append-only log of events
+- **product_reads**: current state of products
+- **inventory_reads**: current stock per product
+- **order_reads**: current order status, items, and totals
+- **idempotency_keys**: tracks past POST requests to ensure idempotent behavior
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## Getting Started
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 1. Clone & Install
 
-## Code of Conduct
+```bash
+git clone https://github.com/segunemmanuel/cqrs-es-shop.git
+cd laravel-cqrs-es-shop
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 2. Set up database
 
-## Security Vulnerabilities
+Edit `.env` with your DB credentials, then run:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan migrate
+```
 
-## License
+### 3. Run server
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan serve
+```
+
+---
+
+## API Routes
+
+### Commands
+
+| Method | Endpoint                                           | Description                    |
+| ------ | -------------------------------------------------- | ------------------------------ |
+| POST   | `/api/commands/products`                           | Create product                 |
+| POST   | `/api/commands/inventory/adjust`                   | Adjust inventory for a product |
+| POST   | `/api/commands/orders`                             | Create order                   |
+| POST   | `/api/commands/orders/{orderId}/items`             | Add item to order              |
+| POST   | `/api/commands/orders/{orderId}/items/remove`      | Remove item from order         |
+| POST   | `/api/commands/orders/{orderId}/place`             | Place order                    |
+| POST   | `/api/commands/orders/{orderId}/cancel`            | Cancel order                   |
+| POST   | `/api/commands/orders/{orderId}/payment/authorize` | Mark payment authorized        |
+
+### Reads
+
+| Method | Endpoint                          | Description               |
+| ------ | --------------------------------- | ------------------------- |
+| GET    | `/api/read/products`              | List all products         |
+| GET    | `/api/read/products/{id}`         | Get single product        |
+| GET    | `/api/read/inventory/{productId}` | Get inventory for product |
+| GET    | `/api/read/orders`                | List all orders           |
+| GET    | `/api/read/orders/{id}`           | Get single order          |
+
+---
+
+## Example Usage
+
+**Create product**
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/commands/products \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -d '{"sku":"SKU-123","name":"Widget","price_cents":1999,"description":"Demo widget"}'
+```
+
+**Adjust inventory**
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/commands/inventory/adjust \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -d '{"product_id":"<product_uuid>","delta":25}'
+```
+
+**Idempotency example**
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/commands/products \
+    -H "Idempotency-Key: abc123" \
+    -H "Content-Type: application/json" \
+    -d '{"sku":"SKU-999","name":"Idempotent Widget","price_cents":2999}'
+```
+
+---
+
+## Postman
+
+Import the provided Postman collection (`/docs/postman/cqrs_es_shop_postman_collection.json`) and environment (`/docs/postman/cqrs_es_shop_postman_environment.json`).
+
+Recommended flow:
+
+1. Create Product
+2. Adjust Inventory
+3. Create Order → Add Item → Remove Item → Place Order → Authorize Payment
+4. Use `/api/read/...` endpoints to verify state
+
+---
+
+## Rebuild & Tail
+
+- **Rebuild projections** (wipe and replay):
+    ```bash
+    php artisan projections:rebuild
+    ```
+- **Tail the event stream**:
+    ```bash
+    php artisan events:tail
+    ```
+

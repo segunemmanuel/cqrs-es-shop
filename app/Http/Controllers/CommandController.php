@@ -174,4 +174,94 @@ public function cancelOrder($orderId)
     return ((int) $v) + 1;
 }
 
+
+    public function removeItemFromOrder(string $orderId, \Illuminate\Http\Request $req)
+{
+    $data = $req->validate([
+        'product_id' => 'required|uuid',
+        'qty'        => 'required|integer|min:1',
+        'expected_version' => 'sometimes|integer|min:1', // for optimistic concurrency
+    ]);
+
+    // optimistic concurrency (optional)
+    if (isset($data['expected_version'])) {
+        $current = (int) DB::table('event_store')->where('aggregate_id', $orderId)->max('version');
+        if ($current !== (int) $data['expected_version']) {
+            return response()->json([
+                'error' => 'version_conflict',
+                'message' => "Expected version {$data['expected_version']}, current is {$current}"
+            ], 409);
+        }
+    }
+
+    $version = $this->nextVersion($orderId);
+
+    DB::table('event_store')->insert([
+        'aggregate_id'   => $orderId,
+        'aggregate_type' => 'order',
+        'version'        => $version,
+        'event_name'     => 'OrderItemRemoved',
+        'payload'        => json_encode([
+            'order_id'   => (string) $orderId,
+            'product_id' => (string) $data['product_id'],
+            'qty'        => (int) $data['qty'],
+        ]),
+        'meta'        => json_encode([]),
+        'occurred_at' => now(),
+    ]);
+
+    app(\App\Projectors\ProjectorRegistry::class)->dispatch('OrderItemRemoved', [
+        'order_id'   => (string) $orderId,
+        'product_id' => (string) $data['product_id'],
+        'qty'        => (int) $data['qty'],
+    ]);
+
+    return response()->json(['status' => 'ok', 'order_id' => $orderId]);
+}
+
+/**
+ * POST /api/commands/orders/{orderId}/payment/authorize
+ * Body: { "amount_cents": 2499 }
+ */
+public function markPaymentAuthorized(string $orderId, \Illuminate\Http\Request $req)
+{
+    $data = $req->validate([
+        'amount_cents'    => 'required|integer|min:0',
+        'expected_version'=> 'sometimes|integer|min:1', // optional optimistic concurrency
+    ]);
+
+    // optimistic concurrency (optional)
+    if (isset($data['expected_version'])) {
+        $current = (int) DB::table('event_store')->where('aggregate_id', $orderId)->max('version');
+        if ($current !== (int) $data['expected_version']) {
+            return response()->json([
+                'error' => 'version_conflict',
+                'message' => "Expected version {$data['expected_version']}, current is {$current}"
+            ], 409);
+        }
+    }
+
+    $version = $this->nextVersion($orderId);
+
+    DB::table('event_store')->insert([
+        'aggregate_id'   => $orderId,
+        'aggregate_type' => 'order',
+        'version'        => $version,
+        'event_name'     => 'PaymentAuthorized',
+        'payload'        => json_encode([
+            'order_id'     => (string) $orderId,
+            'amount_cents' => (int) $data['amount_cents'],
+        ]),
+        'meta'        => json_encode([]),
+        'occurred_at' => now(),
+    ]);
+
+    app(\App\Projectors\ProjectorRegistry::class)->dispatch('PaymentAuthorized', [
+        'order_id'     => (string) $orderId,
+        'amount_cents' => (int) $data['amount_cents'],
+    ]);
+
+    return response()->json(['status' => 'payment_authorized', 'order_id' => $orderId]);
+}
+
 }
