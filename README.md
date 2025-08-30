@@ -1,13 +1,17 @@
 
 # Laravel CQRS + Event Sourcing Shop
+[![Laravel](https://img.shields.io/badge/Laravel-11.x-ff2d20.svg)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777bb3.svg)](https://www.php.net/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CQRS](https://img.shields.io/badge/Pattern-CQRS-blue.svg)](#)
+[![Event Sourcing](https://img.shields.io/badge/Pattern-Event%20Sourcing-blue.svg)](#)
 
+Production-style demo showcasing **CQRS + Event Sourcing** in Laravel 11.
 A demo **e-commerce backend** built with Laravel 11, demonstrating **CQRS** (Command Query Responsibility Segregation) and **Event Sourcing** patterns.
 
-- Commands append **events** to an `event_store`.
-- Projections build **read models** (`product_reads`, `inventory_reads`, `order_reads`) for fast queries.
-- Tools to **rebuild projections** and **tail the event stream**.
-- Supports **idempotency keys** and **optimistic concurrency**.
-
+- Commands append immutable events to an **event store**.
+- **Projectors** update denormalized **read models** for queries.
+- Includes **idempotency keys**, **optimistic concurrency**, `projections:rebuild`, and `events:tail`.
 ---
 
 ## Features
