@@ -9,9 +9,6 @@
 Production-style demo showcasing **CQRS + Event Sourcing** in Laravel 11.
 A demo **e-commerce backend** built with Laravel 11, demonstrating **CQRS** (Command Query Responsibility Segregation) and **Event Sourcing** patterns.
 
-- Commands append immutable events to an **event store**.
-- **Projectors** update denormalized **read models** for queries.
-- Includes **idempotency keys**, **optimistic concurrency**, `projections:rebuild`, and `events:tail`.
 ---
 
 ## Features
